@@ -1,0 +1,397 @@
+
+<html>
+<head>
+	<title>Canvas & Mootools</title>
+	<script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mootools/1.6.0/mootools-core.js"></script>
+	<script type="text/javascript">
+		var canvas, ctx, balls, idTimer, idTimerGrowUp;
+
+		 class TGameObject {
+			constructor(pX, pY) {
+				this.velX = 0;
+				this.velY = 0;
+				this.posX = pX;
+				this.posY = pY;
+			}
+			
+			draw(ctx) {
+				
+			}
+		}
+		
+		class TBall extends TGameObject {
+			constructor(pX, pY) {
+				super(pX, pY);
+				this.colBall = 'rgb(' + Math.floor(Math.random() * 256) + ',' + Math.floor(Math.random() * 256) + ',' + Math.floor(Math.random() * 256) + ')';
+				this.rBall = 5 + Math.random() * 25;
+			}
+		
+			colorBall(ctx) {
+				var gradient = ctx.createRadialGradient(this.posX + this.rBall / 4, this.posY - this.rBall / 6, this.rBall / 8, this.posX, this.posY, this.rBall);
+				gradient.addColorStop(0, '#fff');
+				gradient.addColorStop(0.85, this.colBall);
+				return gradient;
+			}
+			
+			draw(ctx) {
+				ctx.fillStyle = this.colorBall(ctx);
+				ctx.beginPath();
+				ctx.arc(this.posX, this.posY, this.rBall, 0, 2 * Math.PI, false);
+				ctx.closePath();
+				ctx.fill();
+			}
+		}
+		
+		class TSquare extends TGameObject {
+			constructor(pX, pY) {
+				super(pX, pY);
+				this.size = 5 + Math.random() * 10
+			}
+			
+			draw(ctx) {
+				ctx.beginPath();
+				ctx.rect(this.posX, this.posY, this.size, this.size);
+				ctx.fill();
+			}
+		}
+		
+		class TTriangle extends TGameObject {
+			constructor(pX, pY) {
+				super(pX, pY);
+				
+				<!-- var angle = Math.random() * Math.PI; -->
+				<!-- this.pX1 = 30 * Math.cos(angle) -->
+				<!-- this.pY1 = 30 * Math.sin(angle) -->
+				
+				<!-- angle = Math.random() * Math.PI; -->
+				<!-- this.pX2 = 30 * Math.cos(angle) -->
+				<!-- this.pY2 = 30 * Math.sin(angle) -->
+				
+				<!-- angle = Math.random() * Math.PI; -->
+				<!-- this.pX3 = 30 * Math.cos(angle) -->
+				<!-- this.pY3 = 30 * Math.sin(angle) -->
+				
+				this.pX1 = -20
+				this.pY1 = -20
+				this.pX2 = 0
+				this.pY2 = 20 * (Math.random() < 0.5 ? 1 : -1)
+				this.pX3 = 20
+				this.pY3 = -20
+				
+				this.size = 0.2 + Math.random()
+			}
+			
+			draw(ctx) {
+				ctx.beginPath();
+				ctx.moveTo(this.posX + this.pX1 * this.size, this.posY + this.pY1 * this.size);
+				ctx.lineTo(this.posX + this.pX2 * this.size, this.posY + this.pY2 * this.size);
+				ctx.lineTo(this.posX + this.pX3 * this.size, this.posY + this.pY3 * this.size);
+				ctx.fill();
+			}
+		}
+		
+		function drawBack(ctx,col1,col2,w,h){
+			// закрашиваем канвас градиентным фоном
+			ctx.save();
+			var g = ctx.createLinearGradient(0,0,0,h);
+			g.addColorStop(1,col1);
+			g.addColorStop(0,col2);
+			ctx.fillStyle = g;
+			ctx.fillRect(0,0,w,h);
+			ctx.restore();
+		}
+		
+		// инициализация работы
+		function init(){
+			canvas = document.getElementById('canvas');
+
+			if (canvas.getContext){
+				ctx = canvas.getContext('2d');
+				//рисуем фон
+				drawBack(ctx,'#202020','#aaa',canvas.width,canvas.height);
+				//создаем 10 шариков, заноси их в массив и выводим на canvas
+				balls = [];
+				for (var i = 1; i <= 10;i++){
+					var item = new TTriangle(10 + Math.random() * (canvas.width - 30), 10 + Math.random() * (canvas.height - 30));
+					item.draw(ctx);
+					balls.push(item);
+				}
+			}
+		}
+		
+		// создаем новый шарик по щелчку мыши, добавляем его в массив шариков и рисуем его
+		function goInput(event){
+			var x = event.clientX;
+			var y = event.clientY;
+			
+			var item = null
+			
+			if (Math.random() < 0.33)
+				item = new TTriangle(x,y);
+			else if (Math.random() >= 0.33 && Math.random() < 0.66)
+				item = new TSquare(x, y);
+			else
+				item = new TBall(x, y);
+			
+			item.draw(ctx);
+			balls.push(item);
+		}
+		
+		function IntersactionCC(x0, y0, r0, x1, y1, r1)
+		{
+			if (Math.sqrt(Math.pow(x0 - x1, 2) + Math.pow(y0 - y1, 2)) <= r0 + r1 )
+			{
+				return true;
+			}
+			
+			return false;
+		}
+		
+		function moveBall(chaos = false){
+			//реализация движения шариков, находящихся в массиве balls
+			drawBack(ctx,'#202020','#aaa',canvas.width,canvas.height);
+			for (var i = 0; i < balls.length; ) {
+				if (chaos) 
+				{
+					balls[i].posX = balls[i].posX +  (-1 + Math.random() * 2);
+					balls[i].posY = balls[i].posY +  (-1 + Math.random() * 2);
+				} else {
+					balls[i].posX = balls[i].posX +  balls[i].velX;
+					balls[i].posY = balls[i].posY +  balls[i].velY;
+				}
+				
+				balls[i].draw(ctx);
+				
+				if (balls[i].posX > canvas.width || balls[i].posX < 0 || balls[i].posY < 0) balls.splice(i, 1);
+				else i++;
+			}
+			
+			// пересечение шаров
+			for (var i = 0; i < balls.length; i++) {
+				if (! (balls[i] instanceof TBall) ) continue;
+				for (var j = 0; j < balls.length; j++) {
+					if (! (balls[j] instanceof TBall) ) continue;
+					if (i != j && IntersactionCC(balls[i].posX, balls[i].posY, balls[i].rBall, balls[j].posX, balls[j].posY, balls[j].rBall))
+					{
+						balls.splice(i, 1);
+						balls.splice(i > j ? j : j - 1, 1);
+						
+						i--;
+						j--;
+					}
+				}
+			}
+			
+			class Point
+			{
+				constructor(x, y) {
+					this.x = x;
+					this.y = y;
+				}
+			}
+			 
+			
+			class Line {
+				constructor(p0x, p0y, p1x, p1y) {
+					this.p1 = new Point(p0x, p0y);
+					this.p2 = new Point(p1x, p1y);
+				}
+			}
+			
+			function area (a, b, c) {
+				return (b.x - a.x) * (c.y - a.y) - (b.y - a.y) * (c.x - a.x);
+			}
+			
+			function swap(a, b) {
+				var t = a;
+				a = b;
+				b = t;
+			}
+			
+			function max(a, b) {
+				if (a > b) return a;
+				return b;
+			}
+			
+			function min(a, b) {
+				if (a < b) return a;
+				return b;
+			}
+			 
+			function intersect_1 (a, b, c, d) {
+				if (a > b)  swap (a, b);
+				if (c > d)  swap (c, d);
+				return max(a,c) <= min(b,d);
+			}
+			
+
+			function intersect (a, b, c, d) {
+				return intersect_1 (a.x, b.x, c.x, d.x)
+					&& intersect_1 (a.y, b.y, c.y, d.y)
+					&& area(a, b, c) * area(a, b, d) <= 0
+					&& area(c, d, a) * area(c, d, b) <= 0;
+			}
+						
+			function CheckIntersactionLine(a, b)
+			{
+				return intersect(a.p1, a.p2, b.p1, b.p2);
+			}
+			
+			// пересечения прямых
+			for (var i = 0; i < balls.length; i++) {
+				if (balls[i] instanceof TBall) continue;
+				for (var j = 0; j < balls.length; j++) {
+					if (i == j || balls[j] instanceof TBall) continue;
+					
+					linesA = []
+					linesB = []
+					
+					if (balls[i] instanceof TSquare)
+						linesA = [ new Line(balls[i].posX, balls[i].posY, balls[i].posX + balls[i].size, balls[i].posY),
+								  new Line(balls[i].posX, balls[i].posY, balls[i].posX, balls[i].posY + balls[i].size),
+								  new Line(balls[i].posX, balls[i].posY + balls[i].size, balls[i].posX + balls[i].size, balls[i].posY),
+								  new Line(balls[i].posX + balls[i].size, balls[i].posY, balls[i].posX, balls[i].posY + balls[i].size) ]
+					else if (balls[i] instanceof TTriangle)
+						linesA = [  new Line(balls[i].posX + balls[i].pX1 * balls[i].size, balls[i].posY + balls[i].pY1 * balls[i].size, balls[i].posX + balls[i].pX2 * balls[i].size, balls[i].posY + balls[i].pY2 * balls[i].size),
+						            new Line(balls[i].posX + balls[i].pX2 * balls[i].size, balls[i].posY + balls[i].pY2 * balls[i].size, balls[i].posX + balls[i].pX3 * balls[i].size, balls[i].posY + balls[i].pY3 * balls[i].size),
+									new Line(balls[i].posX + balls[i].pX1 * balls[i].size, balls[i].posY + balls[i].pY1 * balls[i].size,balls[i].posX + balls[i].pX3 * balls[i].size, balls[i].posY + balls[i].pY3 * balls[i].size)
+								 ]
+					
+					if (balls[j] instanceof TSquare)
+						linesB = [ new Line(balls[j].posX, balls[j].posY, balls[j].posX + balls[j].size, balls[j].posY),
+								  new Line(balls[j].posX, balls[j].posY, balls[j].posX, balls[j].posY + balls[j].size),
+								  new Line(balls[j].posX, balls[j].posY + balls[j].size, balls[j].posX + balls[j].size, balls[j].posY),
+								  new Line(balls[j].posX + balls[j].size, balls[j].posY, balls[j].posX, balls[j].posY + balls[j].size) ]
+					else if (balls[j] instanceof TTriangle)
+						linesB = [  new Line(balls[j].posX + balls[j].pX1 * balls[j].size, balls[j].posY + balls[j].pY1 * balls[j].size, balls[j].posX + balls[j].pX2 * balls[j].size, balls[j].posY + balls[j].pY2 * balls[j].size),
+						            new Line(balls[j].posX + balls[j].pX2 * balls[j].size, balls[j].posY + balls[j].pY2 * balls[j].size, balls[j].posX + balls[j].pX3 * balls[j].size, balls[j].posY + balls[j].pY3 * balls[j].size),
+									new Line(balls[j].posX + balls[j].pX1 * balls[j].size, balls[j].posY + balls[j].pY1 * balls[j].size,balls[j].posX + balls[j].pX3 * balls[j].size, balls[j].posY + balls[j].pY3 * balls[j].size)
+								 ]
+					
+					for (var u = 0; u < linesA.length; u++)
+					{
+						for (var o = 0; o < linesB.length; o++)
+						{
+							if (CheckIntersactionLine(linesA[u], linesB[o]))
+							{
+								balls.splice(i, 1);
+								balls.splice(i > j ? j : j - 1, 1);
+						
+								i--;
+								j--;	
+								
+								u = linesA.length;
+								o = linesB.length;
+							}
+						}
+					}				
+				}
+			}
+		}
+		
+		var dx = [0, -1,  0, 1]
+		var dy = [-1,  0, 1, 0]
+		
+		function moveUp(){
+			for (var i = 0; i < balls.length; i++) {
+				balls[i].velX = dx[0];
+				balls[i].velY = dy[0];
+			}
+			
+			clearInterval(idTimer);
+			idTimer = setInterval('moveBall();', 50);
+		}
+		
+		function moveRight(){
+			for (var i = 0; i < balls.length; i++) {
+				balls[i].velX = dx[1];
+				balls[i].velY = dy[1];
+			}
+		
+			clearInterval(idTimer);
+			idTimer = setInterval('moveBall();', 50);
+		}
+		
+		function moveDown(){
+			for (var i = 0; i < balls.length; i++) {
+				balls[i].velX = dx[2];
+				balls[i].velY = dy[2];
+			}
+		
+			clearInterval(idTimer);
+			idTimer = setInterval('moveBall();', 50);
+		}
+		
+		function moveLeft(){
+			for (var i = 0; i < balls.length; i++) {
+				balls[i].velX = dx[3];
+				balls[i].velY = dy[3];
+			}
+		
+			clearInterval(idTimer);
+			idTimer = setInterval('moveBall();', 50);
+		}
+		
+		function moveRandom(){
+			for (var i = 0; i < balls.length; i++) {
+				balls[i].velX = -1 + Math.random() * 2;
+				balls[i].velY = -1 + Math.random() * 2;
+			}
+		
+			clearInterval(idTimer);
+			idTimer = setInterval('moveBall();', 50);
+		}
+		
+		function moveChaos(){
+			clearInterval(idTimer);
+			idTimer = setInterval('moveBall(true);', 50);
+		}
+		
+		function growUp() {
+			drawBack(ctx,'#202020','#aaa',canvas.width,canvas.height);
+			
+			for(var i = 0; i < balls.length; i++)
+			{
+				if (balls[i].rBall > 50)
+				{
+					balls.splice(i, 1);
+					i --;
+					continue;
+				}
+			
+				balls[i].rBall += 1;
+				
+				balls[i].draw(ctx);
+				
+				if (balls[i].posX > canvas.width || balls[i].posX < 0 || balls[i].posY < 0) 
+				{
+					balls.splice(i, 1);
+					i --;
+				}
+			}
+		}
+		
+		function startGrowUp() {
+			clearInterval(idTimerGrowUp);
+			idTimerGrowUp = setInterval('growUp();', 50);
+		}
+	</script>
+	<style type="text/css">
+		canvas { border: 1px solid blue; }
+	</style>
+</head>
+<body onload="init();">
+	<canvas id="canvas" width="600" height="400" onclick="goInput(event);">
+	</canvas>
+	<form>
+		<input type = "button" value = "Движение вверх" onclick="moveUp()">
+		<input type = "button" value = "Движение вправо" onclick="moveRight()">
+		<input type = "button" value = "Движение вниз" onclick="moveDown()">
+		<input type = "button" value = "Движение влево" onclick="moveLeft()">
+		<input type = "button" value = "Движение random" onclick="moveRandom()">
+		<input type = "button" value = "Движение chaos" onclick="moveChaos()">
+		<input type = "button" value = "Начать рост" onclick="startGrowUp()">
+		<input type = "button" value = "Стоп" onclick="clearInterval(idTimer);">
+	</form>
+</body>
+</html>
